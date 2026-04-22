@@ -53,7 +53,7 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		A10000E0 = {
+		A1000030 = {
 			isa = PBXGroup;
 			children = (
 				A1000040 /* GiggleLab */,

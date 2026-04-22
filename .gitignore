@@ -6,9 +6,17 @@
 .env
 .env.local
 
+# API Keys and Secrets
+Config.swift
+APIKeys.swift
+Secrets.swift
+
 # Xcode / Swift
 DerivedData/
 build/
 *.xcuserstate
 xcuserdata/
 *.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
