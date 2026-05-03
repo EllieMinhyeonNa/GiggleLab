@@ -28,7 +28,17 @@ struct RoughComposerView: View {
         "Kor": "Korean",
         "Fra": "French"
     ]
-    private let giggleEmojis = ["😮", "😆", "😅", "🥰", "🥺", "😂", "😭"]
+
+    // Order matches the Figma bar.
+    private let giggleEmojiOptions: [GiggleEmojiOption] = [
+        .init(id: "laughing", moodEmoji: "😆", assetName: "Laughing GiggleBee"),
+        .init(id: "pleading", moodEmoji: "🥺", assetName: "Pleading GiggleBee"),
+        .init(id: "loving", moodEmoji: "🥰", assetName: "Loving GiggleBee"),
+        .init(id: "crying", moodEmoji: "😭", assetName: "Crying GiggleBee"),
+        .init(id: "excited", moodEmoji: "😮", assetName: "Excited GiggleBee"),
+        .init(id: "nervous", moodEmoji: "😅", assetName: "Nervous GiggleBee"),
+        .init(id: "surprised", moodEmoji: "😂", assetName: "Surprised GiggleBee")
+    ]
 
     private struct ToolBarTopAnchorKey: PreferenceKey {
         static var defaultValue: Anchor<CGRect>? = nil
@@ -39,7 +49,7 @@ struct RoughComposerView: View {
 
     private var emojisListHeight: CGFloat {
         // EmojisListView: each item 44pt, spacing 10pt, plus container padding 8pt top/bottom.
-        let n = CGFloat(giggleEmojis.count)
+        let n = CGFloat(giggleEmojiOptions.count)
         return (n * 44) + ((n - 1) * 10) + 16
     }
 
@@ -61,8 +71,10 @@ struct RoughComposerView: View {
 
                 Spacer(minLength: 0)
 
-                toolBar
-                    .anchorPreference(key: ToolBarTopAnchorKey.self, value: .bounds) { $0 }
+                if alternativeLines.isEmpty {
+                    toolBar
+                        .anchorPreference(key: ToolBarTopAnchorKey.self, value: .bounds) { $0 }
+                }
                 keyboardBlock
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -75,11 +87,11 @@ struct RoughComposerView: View {
                     let centerY = bottomY - (emojisListHeight / 2)
                     let centerX = proxy.size.width - 10 - (emojisListWidth / 2)
 
-                    EmojisListView(emojis: giggleEmojis, selectedEmoji: $selectedEmoji) { emoji in
+                    EmojisListView(options: giggleEmojiOptions, selectedEmoji: $selectedEmoji) { option in
                         withAnimation(.easeOut(duration: 0.2)) {
                             showEmojisList = false
                         }
-                        fetchAlternativesFromGemini(emoji: emoji)
+                        fetchAlternativesFromGemini(emoji: option.moodEmoji)
                     }
                     .position(x: centerX, y: centerY)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -103,6 +115,16 @@ struct RoughComposerView: View {
             }
         } message: {
             Text(errorMessage ?? "")
+        }
+        .onChange(of: message) { _, _ in
+            // If the user edits/deletes text while alternatives are showing, dismiss the cards
+            // and return to the keyboard. (This includes deleting the highlighted selection.)
+            if !alternativeLines.isEmpty && !isLoadingAlternatives {
+                // Avoid "Modifying state during view update" warnings by deferring the reset.
+                DispatchQueue.main.async {
+                    clearAlternativesAndSession()
+                }
+            }
         }
     }
 
@@ -143,6 +165,7 @@ struct RoughComposerView: View {
         let lang = languageMapping[targetLanguage] ?? "English"
         isLoadingAlternatives = true
         alternativeLines = []
+        selectedEmoji = emoji
         Task {
             do {
                 let lines = try await GeminiService.shared.generateExpressiveAlternatives(
@@ -191,8 +214,13 @@ struct RoughComposerView: View {
         let newSelection = NSRange(location: r.location, length: newLength)
         textIntent = TypingTextIntent(.setSelectionUTF16(newSelection))
 
+        clearAlternativesAndSession()
+    }
+
+    private func clearAlternativesAndSession() {
         alternativeLines = []
         selectedEmoji = nil
+        showEmojisList = false
         giggleSessionRange = nil
         giggleSessionTextForAPI = nil
     }
@@ -313,9 +341,20 @@ struct RoughComposerView: View {
                 )
                 .background(Theme.keyboardBackground)
             } else {
-                GiggleAlternativeCardsView(lines: alternativeLines) { index in
-                    applyAlternative(at: index)
+                VStack(spacing: 8) {
+                    TopEmojiSelectionBarView(
+                        options: giggleEmojiOptions,
+                        selectedMoodEmoji: $selectedEmoji
+                    ) { option in
+                        fetchAlternativesFromGemini(emoji: option.moodEmoji)
+                    }
+
+                    GiggleAlternativeCardsView(lines: alternativeLines) { index in
+                        applyAlternative(at: index)
+                    }
                 }
+                .padding(.top, 16)
+                .background(Theme.keyboardBackground)
             }
 
             RoundedRectangle(cornerRadius: 100, style: .continuous)
@@ -325,6 +364,86 @@ struct RoughComposerView: View {
                 .padding(.bottom, 6)
                 .frame(maxWidth: .infinity)
                 .background(Theme.keyboardBackground)
+        }
+    }
+}
+
+// MARK: - Top emoji selection bar (Figma)
+
+struct GiggleEmojiOption: Identifiable, Equatable {
+    let id: String
+    let moodEmoji: String
+    let assetName: String
+}
+
+private struct TopEmojiSelectionBarView: View {
+    /// Figma: 344×51 with 8pt inset on a 360pt canvas.
+    private let screenHorizontalMargin: CGFloat = 8
+    private let barHeight: CGFloat = 51
+    private let barCornerRadius: CGFloat = 56
+
+    /// Figma: selection ellipse 42×42, image ~33.336×33.336.
+    private let emojiSlotSize: CGFloat = 42
+    private let emojiIconSize: CGFloat = 36
+
+    let options: [GiggleEmojiOption]
+    @Binding var selectedMoodEmoji: String?
+    var onSelect: (GiggleEmojiOption) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(options) { option in
+                let isSelected = selectedMoodEmoji == option.moodEmoji
+                Button {
+                    selectedMoodEmoji = option.moodEmoji
+                    onSelect(option)
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(isSelected ? Theme.emojiPillBackground : .clear)
+                            .frame(width: emojiSlotSize, height: emojiSlotSize)
+
+                        EmojiIconForTopBar(assetName: option.assetName, fallbackEmoji: option.moodEmoji)
+                            .frame(width: emojiIconSize, height: emojiIconSize)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(option.moodEmoji))
+            }
+        }
+        .padding(.horizontal, 10)
+        .frame(height: barHeight)
+        .background(
+            RoundedRectangle(cornerRadius: barCornerRadius, style: .continuous)
+                .fill(Theme.keyBackground)
+        )
+        .padding(.horizontal, screenHorizontalMargin)
+    }
+}
+
+private struct EmojiIconForTopBar: View {
+    let assetName: String
+    let fallbackEmoji: String
+
+    private var uiImage: UIImage? {
+        if let img = UIImage(named: assetName) { return img }
+        if let url = Bundle.main.url(forResource: assetName, withExtension: "png"),
+           let img = UIImage(contentsOfFile: url.path) { return img }
+        if let url = Bundle.main.url(forResource: assetName, withExtension: nil),
+           let img = UIImage(contentsOfFile: url.path) { return img }
+        return nil
+    }
+
+    var body: some View {
+        if let uiImage {
+            Image(uiImage: uiImage)
+                .resizable()
+                .scaledToFit()
+                .padding(2)
+        } else {
+            Text(fallbackEmoji)
+                .font(.system(size: 24))
         }
     }
 }

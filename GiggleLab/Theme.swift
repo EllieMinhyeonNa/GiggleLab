@@ -5,7 +5,7 @@ struct Theme {
 
     static let primaryYellow = Color(hex: 0xFFBB00)
     static let lightYellow = Color(hex: 0xFFDF9A)
-    static let emojiPillBackground = Color(hex: 0xFFECb6)
+    static let emojiPillBackground = Color(hex: 0xFFBB00)
     static let paleYellow = Color(hex: 0xFFF8DA)
     static let returnKeyYellow = Color(hex: 0xFFC653)
 

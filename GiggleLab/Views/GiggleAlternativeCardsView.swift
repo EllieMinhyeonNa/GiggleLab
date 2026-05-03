@@ -21,12 +21,13 @@ struct GiggleAlternativeCardsView: View {
     var body: some View {
         VStack(spacing: 8) {
             ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
-                HStack(alignment: .center, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
                     Text(line)
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.black.opacity(0.8))
+                        .font(.system(size: 16, weight: .regular))
+                        .lineSpacing(2)
+                        .foregroundStyle(.black)
                         .multilineTextAlignment(.leading)
-                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     Button {
@@ -34,15 +35,17 @@ struct GiggleAlternativeCardsView: View {
                     } label: {
                         Image(systemName: "arrow.right")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Theme.keyDark)
+                            .foregroundStyle(.black)
                             .frame(width: 36, height: 36)
-                            .background(Theme.paleYellow)
+                            .background(Color(hex: 0xFFE18E))
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 16)
-                .frame(height: 64)
+                // Figma-style insets: 16px left + 16px top/bottom (kept even if text wraps).
+                .padding(.leading, 16)
+                .padding(.trailing, 16)
+                .padding(.vertical, 16)
                 .background(Theme.keyBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }

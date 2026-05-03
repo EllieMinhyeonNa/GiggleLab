@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0DBDA5792F9FE4BA0099A283 /* Crying GiggleBee.png in Resources */ = {isa = PBXBuildFile; fileRef = 0DBDA5722F9FE4BA0099A283 /* Crying GiggleBee.png */; };
+		0DBDA57A2F9FE4BA0099A283 /* Excited GiggleBee.png in Resources */ = {isa = PBXBuildFile; fileRef = 0DBDA5732F9FE4BA0099A283 /* Excited GiggleBee.png */; };
+		0DBDA57B2F9FE4BA0099A283 /* Surprised GiggleBee.png in Resources */ = {isa = PBXBuildFile; fileRef = 0DBDA5782F9FE4BA0099A283 /* Surprised GiggleBee.png */; };
+		0DBDA57C2F9FE4BA0099A283 /* Pleading GiggleBee.png in Resources */ = {isa = PBXBuildFile; fileRef = 0DBDA5772F9FE4BA0099A283 /* Pleading GiggleBee.png */; };
+		0DBDA57D2F9FE4BA0099A283 /* Loving GiggleBee.png in Resources */ = {isa = PBXBuildFile; fileRef = 0DBDA5752F9FE4BA0099A283 /* Loving GiggleBee.png */; };
+		0DBDA57E2F9FE4BA0099A283 /* Nervous GiggleBee.png in Resources */ = {isa = PBXBuildFile; fileRef = 0DBDA5762F9FE4BA0099A283 /* Nervous GiggleBee.png */; };
+		0DBDA57F2F9FE4BA0099A283 /* Laughing GiggleBee.png in Resources */ = {isa = PBXBuildFile; fileRef = 0DBDA5742F9FE4BA0099A283 /* Laughing GiggleBee.png */; };
 		A1000001 /* GiggleLabApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000010 /* GiggleLabApp.swift */; };
 		A1000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011 /* ContentView.swift */; };
 		A1000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000012 /* Assets.xcassets */; };
@@ -24,11 +31,17 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0DBDA5722F9FE4BA0099A283 /* Crying GiggleBee.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Crying GiggleBee.png"; sourceTree = "<group>"; };
+		0DBDA5732F9FE4BA0099A283 /* Excited GiggleBee.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Excited GiggleBee.png"; sourceTree = "<group>"; };
+		0DBDA5742F9FE4BA0099A283 /* Laughing GiggleBee.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Laughing GiggleBee.png"; sourceTree = "<group>"; };
+		0DBDA5752F9FE4BA0099A283 /* Loving GiggleBee.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Loving GiggleBee.png"; sourceTree = "<group>"; };
+		0DBDA5762F9FE4BA0099A283 /* Nervous GiggleBee.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Nervous GiggleBee.png"; sourceTree = "<group>"; };
+		0DBDA5772F9FE4BA0099A283 /* Pleading GiggleBee.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Pleading GiggleBee.png"; sourceTree = "<group>"; };
+		0DBDA5782F9FE4BA0099A283 /* Surprised GiggleBee.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Surprised GiggleBee.png"; sourceTree = "<group>"; };
 		A1000000 /* GiggleLab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GiggleLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000010 /* GiggleLabApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GiggleLabApp.swift; sourceTree = "<group>"; };
 		A1000011 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A1000012 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		A1000013 /* Preview Content */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "Preview Content"; sourceTree = "<group>"; };
 		A1000014 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		A1000015 /* GiggleLabKeyboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GiggleLabKeyboard.swift; sourceTree = "<group>"; };
 		A1000016 /* RoughComposerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoughComposerView.swift; sourceTree = "<group>"; };
@@ -53,12 +66,12 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		A10000E0 = {
+		A1000013 /* Preview Content */ = {
 			isa = PBXGroup;
 			children = (
-				A1000040 /* GiggleLab */,
-				A1000050 /* Products */,
+				A1000014 /* Preview Assets.xcassets */,
 			);
+			path = "Preview Content";
 			sourceTree = "<group>";
 		};
 		A1000040 /* GiggleLab */ = {
@@ -72,17 +85,24 @@
 				A10000A3 /* Extensions */,
 				A10000A5 /* Services */,
 				A1000012 /* Assets.xcassets */,
+				0DBDA5722F9FE4BA0099A283 /* Crying GiggleBee.png */,
+				0DBDA5732F9FE4BA0099A283 /* Excited GiggleBee.png */,
+				0DBDA5742F9FE4BA0099A283 /* Laughing GiggleBee.png */,
+				0DBDA5752F9FE4BA0099A283 /* Loving GiggleBee.png */,
+				0DBDA5762F9FE4BA0099A283 /* Nervous GiggleBee.png */,
+				0DBDA5772F9FE4BA0099A283 /* Pleading GiggleBee.png */,
+				0DBDA5782F9FE4BA0099A283 /* Surprised GiggleBee.png */,
 				A1000013 /* Preview Content */,
 			);
 			path = GiggleLab;
 			sourceTree = "<group>";
 		};
-		A10000A5 /* Services */ = {
+		A1000050 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A1000030 /* GeminiService.swift */,
+				A1000000 /* GiggleLab.app */,
 			);
-			path = Services;
+			name = Products;
 			sourceTree = "<group>";
 		};
 		A10000A1 /* Views */ = {
@@ -122,20 +142,20 @@
 			path = Keyboard;
 			sourceTree = "<group>";
 		};
-		A1000013 /* Preview Content */ = {
+		A10000A5 /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				A1000014 /* Preview Assets.xcassets */,
+				A1000030 /* GeminiService.swift */,
 			);
-			path = "Preview Content";
+			path = Services;
 			sourceTree = "<group>";
 		};
-		A1000050 /* Products */ = {
+		A10000E0 = {
 			isa = PBXGroup;
 			children = (
-				A1000000 /* GiggleLab.app */,
+				A1000040 /* GiggleLab */,
+				A1000050 /* Products */,
 			);
-			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -201,6 +221,13 @@
 			files = (
 				A1000004 /* Preview Assets.xcassets in Resources */,
 				A1000003 /* Assets.xcassets in Resources */,
+				0DBDA5792F9FE4BA0099A283 /* Crying GiggleBee.png in Resources */,
+				0DBDA57A2F9FE4BA0099A283 /* Excited GiggleBee.png in Resources */,
+				0DBDA57B2F9FE4BA0099A283 /* Surprised GiggleBee.png in Resources */,
+				0DBDA57C2F9FE4BA0099A283 /* Pleading GiggleBee.png in Resources */,
+				0DBDA57D2F9FE4BA0099A283 /* Loving GiggleBee.png in Resources */,
+				0DBDA57E2F9FE4BA0099A283 /* Nervous GiggleBee.png in Resources */,
+				0DBDA57F2F9FE4BA0099A283 /* Laughing GiggleBee.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
