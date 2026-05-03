@@ -11,6 +11,42 @@ actor GeminiService {
     private var lastResetTime = Date()
     private let maxRequestsPerMinute = 15
 
+    /// GiggleBee tone definitions
+    enum GiggleBeeTone {
+        case crying, excited, laughing, loving, nervous, pleading, surprised
+
+        var promptDefinition: String {
+            switch self {
+            case .crying:
+                return "TONE: Dramatic devastation with attitude. Not quiet sadness — loud, almost indignant grief. The energy is 'I cannot believe this happened to me.' Write with emotional intensity, like the world has personally wronged them. Avoid passive or gentle phrasing."
+            case .excited:
+                return "TONE: Stunned into excitement — overwhelmed to the point of going blank. Less 'yay!' and more 'I literally cannot process this right now.' High energy expressed through disbelief, not cheerleading. Fragmented thoughts, trailing off, or all-caps moments fit here."
+            case .laughing:
+                return "TONE: Full body laughter, completely unhinged. Not a chuckle — the kind where you can't finish your sentence. Chaotic, breathless energy. Interrupted thoughts, trailing 'haha's mid-sentence, or absurdist humor all work well."
+            case .loving:
+                return "TONE: Soft, warm, genuinely tender. Not flirty or performative — more like a quiet 'I'm so happy you exist.' Sincere and unhurried. Avoid exclamation-heavy or over-the-top phrasing. The warmth should feel earned, not announced."
+            case .nervous:
+                return "TONE: Trying to hold it together while clearly not holding it together. Awkward, self-aware, slightly self-deprecating. 'Ha ha everything is fine (it's not fine)' energy. Hedging words, over-explaining, or nervous laughter mid-sentence all fit."
+            case .pleading:
+                return "TONE: Maximally soft power — gently irresistible, not demanding. This person knows exactly how endearing they're being and is deploying it strategically. Hopeful, sweet, a little vulnerable. Avoid whining — the pleading should feel charming, not desperate."
+            case .surprised:
+                return "TONE: Clean, pure shock — no layer on top yet. They haven't processed enough to react with feeling. '...wait, what?' energy rather than excitement or fear. Short, stunned phrasing. Trailing off or disbelief works well here."
+            }
+        }
+
+        var emoji: String {
+            switch self {
+            case .crying: return "😢"
+            case .excited: return "🤩"
+            case .laughing: return "😂"
+            case .loving: return "🥰"
+            case .nervous: return "😅"
+            case .pleading: return "🥺"
+            case .surprised: return "😯"
+            }
+        }
+    }
+
     /// Translation style/tone options
     enum TranslationStyle {
         case funny       // Add humor and wit
@@ -42,18 +78,18 @@ actor GeminiService {
         return response
     }
 
-    /// Three expressive rewrites of `text`, steered by a single `moodEmoji` and the composer’s target language.
+    /// Three expressive rewrites of `text`, steered by a single `tone` and the composer's target language.
     /// Response must be a JSON array of exactly three strings (parsed after the model returns).
     func generateExpressiveAlternatives(
         text: String,
-        moodEmoji: String,
+        tone: GiggleBeeTone,
         targetLanguage: String,
         style: TranslationStyle = .playful
     ) async throws -> [String] {
         try await checkRateLimit()
         let prompt = buildAlternativesPrompt(
             text: text,
-            moodEmoji: moodEmoji,
+            tone: tone,
             language: targetLanguage,
             style: style
         )
@@ -139,41 +175,49 @@ actor GeminiService {
 
     private func buildAlternativesPrompt(
         text: String,
-        moodEmoji: String,
+        tone: GiggleBeeTone,
         language: String,
         style: TranslationStyle
     ) -> String {
         let toneHint: String
         switch style {
-        case .funny:
-            toneHint = "Witty, clever, light wordplay where it fits."
-        case .casual:
-            toneHint = "Warm, conversational, like texting a friend."
-        case .emojiRich:
-            toneHint = "Rich with a few well-chosen emojis (not only the mood emoji)."
-        case .playful:
-            toneHint = "Playful, vivid, a little dramatic or funny where it helps—still believable."
+        case .funny:     toneHint = "Lean into wit and wordplay where it fits naturally."
+        case .casual:    toneHint = "Keep it warm and conversational, like texting a friend."
+        case .emojiRich: toneHint = "Weave in a few well-chosen emojis beyond the mood emoji."
+        case .playful:   toneHint = "Playful and vivid — a little dramatic or funny where it helps."
         }
 
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
 
         return """
-        You are GiggleLab. The user wrote a short message and picked ONE mood emoji to steer tone and nuance.
+        You are GiggleLab. Rewrite the user's message as three expressive alternatives.
 
-        USER_MESSAGE (verbatim):
+        USER_MESSAGE:
         \(trimmed)
 
-        MOOD_EMOJI (single character; interpret its feeling and intensity for all three lines):
-        \(moodEmoji)
+        \(tone.promptDefinition)
 
-        OUTPUT_LANGUAGE (write all three alternatives entirely in this language):
-        \(language)
+        STYLE_HINT: \(toneHint)
 
-        Style: \(toneHint)
-        Keep the same core meaning and intent as USER_MESSAGE. Each line should feel distinctly expressive—different voice or angle, not three near-duplicates. No numbering, no bullets, no preamble.
+        OUTPUT_LANGUAGE: Write all three alternatives entirely in \(language).
 
-        Return ONLY valid JSON: exactly one array of exactly three strings, e.g. ["...","...","..."].
-        Escape any double quotes inside strings with backslash. No markdown fences, no keys, no explanation outside the JSON.
+        RULES:
+        - Each alternative must express the SAME core meaning as USER_MESSAGE.
+        - SACRED ELEMENTS: Never remove, replace, or paraphrase proper nouns, names, places,
+          or specific references from the original message.
+          Example: if the message mentions "Griffin", "Mars", or "Tuesday",
+          every alternative must keep them word-for-word.
+        - Each must feel like a DISTINCTLY different angle or voice — not three near-duplicates.
+          Think of it as: casual retelling / emotional peak / clever or understated version.
+        - Write like a real text message — short, punchy, and natural.
+          Fragments, lowercase, and trailing off are all fine.
+          Never write full formal sentences when a fragment would feel more human.
+        - Length should roughly match the original message. No padding.
+        - No numbering, bullets, labels, or preamble.
+
+        Return ONLY valid JSON: exactly one array of exactly three strings.
+        Example format: ["...","...","..."]
+        Escape any internal double quotes with backslash. No markdown fences.
         """
     }
 

@@ -16,6 +16,7 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
+
                     Button("Open composer") {
                         showComposer = true
                     }
@@ -25,6 +26,7 @@ struct ContentView: View {
             }
         }
     }
+
 }
 
 #Preview {

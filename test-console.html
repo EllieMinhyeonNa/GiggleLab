@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GiggleBee Console Tester</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 40px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .instructions {
+            background: #2d2d30;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 600px;
+        }
+        code {
+            background: #1e1e1e;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #ce9178;
+        }
+        h1 { color: #4ec9b0; }
+        h2 { color: #569cd6; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="instructions">
+        <p>All results show in the console. Press <code>Cmd+Option+J</code> (Mac) or <code>F12</code> (Windows) to open it.</p>
+
+        <h2>Quick Start:</h2>
+        <p>1. Open the console</p>
+        <p>2. Enter your API key once:</p>
+        <code>API_KEY = "your-gemini-api-key-here"</code>
+
+        <p>3. Test any message + tone:</p>
+        <code>test("I got the job!", "excited")</code>
+
+        <h2>Available tones:</h2>
+        <p><code>excited, laughing, loving, crying, nervous, pleading, surprised</code></p>
+
+        <h2>Examples:</h2>
+        <code>test("This is amazing!", "laughing")</code><br>
+        <code>test("You mean everything to me", "loving")</code><br>
+        <code>test("I can't believe this", "crying")</code>
+
+        <h2>Test all tones at once:</h2>
+        <code>testAll("I got the job!")</code>
+    </div>
+
+    <script>
+        let API_KEY = '';
+
+        const TONES = {
+            crying: "TONE: Dramatic devastation with attitude. Not quiet sadness — loud, almost indignant grief. The energy is 'I cannot believe this happened to me.' Write with emotional intensity, like the world has personally wronged them. Avoid passive or gentle phrasing.",
+            excited: "TONE: Stunned into excitement — overwhelmed to the point of going blank. Less 'yay!' and more 'I literally cannot process this right now.' High energy expressed through disbelief, not cheerleading. Fragmented thoughts, trailing off, or all-caps moments fit here.",
+            laughing: "TONE: Full body laughter, completely unhinged. Not a chuckle — the kind where you can't finish your sentence. Chaotic, breathless energy. Interrupted thoughts, trailing 'haha's mid-sentence, or absurdist humor all work well.",
+            loving: "TONE: Soft, warm, genuinely tender. Not flirty or performative — more like a quiet 'I'm so happy you exist.' Sincere and unhurried. Avoid exclamation-heavy or over-the-top phrasing. The warmth should feel earned, not announced.",
+            nervous: "TONE: Trying to hold it together while clearly not holding it together. Awkward, self-aware, slightly self-deprecating. 'Ha ha everything is fine (it's not fine)' energy. Hedging words, over-explaining, or nervous laughter mid-sentence all fit.",
+            pleading: "TONE: Maximally soft power — gently irresistible, not demanding. This person knows exactly how endearing they're being and is deploying it strategically. Hopeful, sweet, a little vulnerable. Avoid whining — the pleading should feel charming, not desperate.",
+            surprised: "TONE: Clean, pure shock — no layer on top yet. They haven't processed enough to react with feeling. '...wait, what?' energy rather than excitement or fear. Short, stunned phrasing. Trailing off or disbelief works well here."
+        };
+
+        const EMOJIS = {
+            crying: '😢',
+            excited: '🤩',
+            laughing: '😂',
+            loving: '🥰',
+            nervous: '😅',
+            pleading: '🥺',
+            surprised: '😯'
+        };
+
+        function buildPrompt(text, tone) {
+            return `You are GiggleLab. Rewrite the user's message as three expressive alternatives.
+
+USER_MESSAGE:
+${text.trim()}
+
+${TONES[tone]}
+
+STYLE_HINT: Playful and vivid — a little dramatic or funny where it helps.
+
+OUTPUT_LANGUAGE: Write all three alternatives entirely in English.
+
+RULES:
+- Each alternative must express the SAME core meaning as USER_MESSAGE.
+- SACRED ELEMENTS: Never remove, replace, or paraphrase proper nouns, names, places,
+  or specific references from the original message.
+  Example: if the message mentions "Griffin", "Mars", or "Tuesday",
+  every alternative must keep them word-for-word.
+- Each must feel like a DISTINCTLY different angle or voice — not three near-duplicates.
+  Think of it as: casual retelling / emotional peak / clever or understated version.
+- Write like a real text message — short, punchy, and natural.
+  Fragments, lowercase, and trailing off are all fine.
+  Never write full formal sentences when a fragment would feel more human.
+- Length should roughly match the original message. No padding.
+- No numbering, bullets, labels, or preamble.
+
+Return ONLY valid JSON: exactly one array of exactly three strings.
+Example format: ["...","...","..."]
+Escape any internal double quotes with backslash. No markdown fences.`;
+        }
+
+        async function test(message, tone = 'excited') {
+            if (!API_KEY) {
+                console.error('❌ Please set API_KEY first: API_KEY = "your-key-here"');
+                return;
+            }
+
+            if (!TONES[tone]) {
+                console.error('❌ Invalid tone. Use:', Object.keys(TONES).join(', '));
+                return;
+            }
+
+            console.log('\n' + '='.repeat(70));
+            console.log(`🐝 TESTING: "${message}"`);
+            console.log(`${EMOJIS[tone]} TONE: ${tone.toUpperCase()}`);
+            console.log('='.repeat(70));
+
+            try {
+                const prompt = buildPrompt(message, tone);
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error?.message || `API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const rawText = data.candidates[0].content.parts[0].text;
+
+                // Parse JSON
+                let alternatives;
+                try {
+                    alternatives = JSON.parse(rawText.trim());
+                } catch {
+                    const match = rawText.match(/\[[\s\S]*\]/);
+                    if (match) {
+                        alternatives = JSON.parse(match[0]);
+                    } else {
+                        throw new Error('Could not parse JSON response');
+                    }
+                }
+
+                console.log('\n📝 RESULTS:');
+                alternatives.forEach((alt, i) => {
+                    console.log(`\n[${i + 1}] ${alt}`);
+                });
+                console.log('\n' + '='.repeat(70) + '\n');
+
+                return alternatives;
+
+            } catch (error) {
+                console.error('❌ Error:', error.message);
+                console.log('='.repeat(70) + '\n');
+            }
+        }
+
+        async function testAll(message) {
+            console.log('\n' + '█'.repeat(70));
+            console.log(`🐝 TESTING ALL TONES: "${message}"`);
+            console.log('█'.repeat(70));
+
+            const tones = Object.keys(TONES);
+
+            for (let i = 0; i < tones.length; i++) {
+                await test(message, tones[i]);
+                if (i < tones.length - 1) {
+                    console.log('⏳ Waiting 2 seconds (rate limit)...\n');
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+
+            console.log('█'.repeat(70));
+            console.log('✅ ALL TESTS COMPLETE');
+            console.log('█'.repeat(70) + '\n');
+        }
+
+        // Make functions globally available
+        window.test = test;
+        window.testAll = testAll;
+
+        console.log('🐝 GiggleBee Tone Tester Loaded!');
+        console.log('━'.repeat(70));
+        console.log('Set your API key: API_KEY = "your-key-here"');
+        console.log('Then run: test("Your message", "excited")');
+        console.log('Or test all: testAll("Your message")');
+        console.log('━'.repeat(70) + '\n');
+    </script>
+</body>
+</html>

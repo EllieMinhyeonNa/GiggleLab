@@ -159,6 +159,20 @@ struct RoughComposerView: View {
         showEmojisList = true
     }
 
+    /// Maps emoji to GiggleBeeTone based on the mood
+    private func emojiToTone(_ emoji: String) -> GeminiService.GiggleBeeTone {
+        switch emoji {
+        case "😆": return .laughing
+        case "🥺": return .pleading
+        case "🥰": return .loving
+        case "😭": return .crying
+        case "😮": return .excited
+        case "😅": return .nervous
+        case "😂": return .surprised
+        default: return .laughing  // fallback
+        }
+    }
+
     /// Runs after the user picks the single mood emoji; fills `alternativeLines` from Gemini (keyboard slot shows loading, then three cards).
     private func fetchAlternativesFromGemini(emoji: String) {
         let text = giggleSessionTextForAPI ?? message
@@ -168,9 +182,10 @@ struct RoughComposerView: View {
         selectedEmoji = emoji
         Task {
             do {
+                let tone = emojiToTone(emoji)
                 let lines = try await GeminiService.shared.generateExpressiveAlternatives(
                     text: text,
-                    moodEmoji: emoji,
+                    tone: tone,
                     targetLanguage: lang,
                     style: .playful
                 )
