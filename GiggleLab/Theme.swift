@@ -10,6 +10,8 @@ struct Theme {
     static let returnKeyYellow = Color(hex: 0xFFC653)
 
     static let keyboardBackground = Color(hex: 0xEDEDED)
+    /// Chat header / subtle surfaces (Figma `Surface/Light/Primary`).
+    static let chatSurface = Color(hex: 0xEDEDED)
     static let textPrimary = Color.black
     static let textSecondary = Color.black.opacity(0.4)
     static let keyBackground = Color.white
@@ -24,6 +26,19 @@ struct Theme {
     static let paddingSmall: CGFloat = 8
     static let paddingMedium: CGFloat = 12
     static let paddingLarge: CGFloat = 24
+
+    // MARK: - Chat composer (TypingTextView in RoughComposerView)
+
+    /// Point size for the pill `TypingTextView` (adjust here or pass a different value into `TypingTextView`).
+    static let composerInputFontSize: CGFloat = 16
+    static let composerInputMinHeight: CGFloat = 40
+    static let composerInputMaxHeight: CGFloat = 60
+    /// Figma chat composer — pill width without vs with right emoji rail (`313-5660`).
+    static let composerInputMaxWidthWithoutRail: CGFloat = 296
+    static let composerInputMaxWidthWithRail: CGFloat = 280
+    /// Figma `313:5353` — send control (matches input row height at 40; centers when field is 60).
+    static let composerSendButtonSize: CGFloat = 40
+    static let composerSendIconSize: CGFloat = 16
 
     // MARK: - Keyboard
 

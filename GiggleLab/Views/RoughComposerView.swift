@@ -1,9 +1,35 @@
 import SwiftUI
+import UIKit
+
+/// Message model for chat display
+struct ChatMessage: Identifiable, Equatable {
+    let id = UUID()
+    let text: String
+    let timestamp: Date
+    let isFromUser: Bool
+}
+
+/// Bottom edge of `chatHeader` in `railSpace` (same space as `VStack` + overlay).
+private struct ProfileBottomRailYPreference: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+/// Top edge of `keyboardBlock` in `railSpace`.
+private struct KeyboardTopRailYPreference: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 
 struct RoughComposerView: View {
     var onBack: () -> Void
 
-    @State private var message = "Test"
+    @State private var message = ""
     @State private var keyboardScreen: KeyboardScreenMode = .letters
     @State private var isShiftOneShot = false
     @State private var isCapsLock = false
@@ -20,6 +46,11 @@ struct RoughComposerView: View {
     /// Snapshot when **Get Giggling** was tapped: range to replace with an alternative, and text sent to Gemini (partial or full).
     @State private var giggleSessionRange: NSRange?
     @State private var giggleSessionTextForAPI: String?
+    /// Laid-out line count from `TypingTextView` (1 = single line / empty slot; 2+ = expanded, height capped at max).
+    @State private var composerVisualLineCount: Int = 1
+    @State private var railProfileBottomY: CGFloat = 0
+    @State private var railKeyboardTopY: CGFloat = 0
+    @State private var messages: [ChatMessage] = []
 
     private let languages = ["Eng", "Esp", "Kor", "Fra"]
     private let languageMapping: [String: String] = [
@@ -40,63 +71,105 @@ struct RoughComposerView: View {
         .init(id: "surprised", moodEmoji: "😂", assetName: "Surprised GiggleBee")
     ]
 
-    private struct ToolBarTopAnchorKey: PreferenceKey {
-        static var defaultValue: Anchor<CGRect>? = nil
-        static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
-            value = nextValue() ?? value
-        }
-    }
-
-    private var emojisListHeight: CGFloat {
-        // EmojisListView: each item 44pt, spacing 10pt, plus container padding 8pt top/bottom.
-        let n = CGFloat(giggleEmojiOptions.count)
-        return (n * 44) + ((n - 1) * 10) + 16
-    }
-
     private var emojisListWidth: CGFloat {
         // EmojisListView: 44pt circle + 8pt padding on each side.
         44 + 16
     }
 
+    private var emojisListHeight: CGFloat {
+        // EmojisListView: 7 items × 44pt + 6 gaps × 10pt + container padding 16pt (8pt top/bottom).
+        let n = CGFloat(giggleEmojiOptions.count)
+        return (n * 44) + ((n - 1) * 10) + 16
+    }
+
+    private var composerInputFieldHeight: CGFloat {
+        composerVisualLineCount <= 1 ? Theme.composerInputMinHeight : Theme.composerInputMaxHeight
+    }
+
+    private var hasComposerText: Bool {
+        !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var body: some View {
         ZStack(alignment: .topLeading) {
-            Color.white
+            Theme.chatSurface
                 .ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: 0) {
-                header
-                textArea
-                    .padding(.horizontal, Theme.paddingLarge)
-                    .padding(.top, Theme.paddingSmall)
+                chatHeader
+                    .background(
+                        GeometryReader { g in
+                            Color.clear.preference(
+                                key: ProfileBottomRailYPreference.self,
+                                value: g.frame(in: .named("railSpace")).maxY
+                            )
+                        }
+                    )
 
-                Spacer(minLength: 0)
+                ScrollView {
+                    VStack(spacing: 0) {
+                        if messages.isEmpty {
+                            Color.clear
+                                .frame(minHeight: 120)
+                        } else {
+                            LazyVStack(spacing: 16) {
+                                ForEach(messages) { msg in
+                                    VStack(spacing: 6) {
+                                        Text(formatTimestamp(msg.timestamp))
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundStyle(Theme.textSecondary)
+                                            .frame(maxWidth: .infinity, alignment: .center)
+
+                                        HStack {
+                                            Spacer()
+                                            Text(msg.text)
+                                                .font(.system(size: 16, weight: .regular))
+                                                .foregroundStyle(Theme.textPrimary)
+                                                .padding(.horizontal, 16)
+                                                .padding(.vertical, 12)
+                                                .background(Theme.primaryYellow)
+                                                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                        }
+                                    }
+                                    .padding(.horizontal, Theme.paddingSmall)
+                                }
+                            }
+                            .padding(.top, 16)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.white)
+
+                composerInputRow
 
                 if alternativeLines.isEmpty {
                     toolBar
-                        .anchorPreference(key: ToolBarTopAnchorKey.self, value: .bounds) { $0 }
                 }
+
                 keyboardBlock
+                    .background(
+                        GeometryReader { g in
+                            Color.clear.preference(
+                                key: KeyboardTopRailYPreference.self,
+                                value: g.frame(in: .named("railSpace")).minY
+                            )
+                        }
+                    )
+            }
+            .coordinateSpace(name: "railSpace")
+            .overlay(alignment: .topTrailing) {
+                if showEmojisList {
+                    emojiRailOverlay
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .overlayPreferenceValue(ToolBarTopAnchorKey.self) { anchor in
-            GeometryReader { proxy in
-                if showEmojisList, let anchor {
-                    let toolBarFrame = proxy[anchor]
-                    let bottomY = toolBarFrame.minY - 8
-                    let centerY = bottomY - (emojisListHeight / 2)
-                    let centerX = proxy.size.width - 10 - (emojisListWidth / 2)
-
-                    EmojisListView(options: giggleEmojiOptions, selectedEmoji: $selectedEmoji) { option in
-                        withAnimation(.easeOut(duration: 0.2)) {
-                            showEmojisList = false
-                        }
-                        fetchAlternativesFromGemini(emoji: option.moodEmoji)
-                    }
-                    .position(x: centerX, y: centerY)
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
-                }
-            }
+        .onPreferenceChange(ProfileBottomRailYPreference.self) { newY in
+            scheduleRailMetricUpdate { if abs(railProfileBottomY - newY) > 0.5 { railProfileBottomY = newY } }
+        }
+        .onPreferenceChange(KeyboardTopRailYPreference.self) { newY in
+            scheduleRailMetricUpdate { if abs(railKeyboardTopY - newY) > 0.5 { railKeyboardTopY = newY } }
         }
         .confirmationDialog("Translate to", isPresented: $showLanguagePicker, titleVisibility: .visible) {
             ForEach(languages, id: \.self) { code in
@@ -116,15 +189,79 @@ struct RoughComposerView: View {
         } message: {
             Text(errorMessage ?? "")
         }
-        .onChange(of: message) { _, _ in
+        .onChange(of: message) { oldValue, newValue in
             // If the user edits/deletes text while alternatives are showing, dismiss the cards
             // and return to the keyboard. (This includes deleting the highlighted selection.)
+            // BUT: Don't clear if the change came from applyAlternative (text got longer/replaced)
             if !alternativeLines.isEmpty && !isLoadingAlternatives {
-                // Avoid "Modifying state during view update" warnings by deferring the reset.
-                DispatchQueue.main.async {
-                    clearAlternativesAndSession()
+                // Check if this was a user edit (typing/deleting) vs. programmatic replacement
+                // If giggleSessionRange exists and the new text contains an alternative, it's from applyAlternative
+                let isProgrammaticReplacement = alternativeLines.contains { newValue.contains($0) }
+
+                if !isProgrammaticReplacement {
+                    // Avoid "Modifying state during view update" warnings by deferring the reset.
+                    DispatchQueue.main.async {
+                        clearAlternativesAndSession()
+                    }
                 }
             }
+        }
+    }
+
+    // MARK: - Send Message
+
+    /// Sends the current message to the chat, adds timestamp, and resets the composer to default state
+    private func handleSendMessage() {
+        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+
+        // Create message with current Eastern Time
+        let newMessage = ChatMessage(
+            text: trimmed,
+            timestamp: Date(),
+            isFromUser: true
+        )
+
+        // Add to messages array
+        messages.append(newMessage)
+
+        // Reset composer to default state
+        message = ""
+        composerUTF16Selection = NSRange(location: 0, length: 0)
+        clearAlternativesAndSession()
+    }
+
+    /// Formats timestamp in Eastern Time as "Today HH:mma" or "Yesterday HH:mma" or "MMM d HH:mma"
+    private func formatTimestamp(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.timeZone = TimeZone(identifier: "America/New_York")
+
+        let easternCalendar = Calendar(identifier: .gregorian)
+        guard let easternTimeZone = TimeZone(identifier: "America/New_York") else {
+            // Fallback if timezone not found
+            formatter.dateFormat = "h:mma"
+            return "Today \(formatter.string(from: date))"
+        }
+
+        var easternCalendarCopy = easternCalendar
+        easternCalendarCopy.timeZone = easternTimeZone
+
+        let isToday = easternCalendarCopy.isDateInToday(date)
+        let isYesterday = easternCalendarCopy.isDateInYesterday(date)
+
+        formatter.dateFormat = "h:mma"
+        let timeString = formatter.string(from: date).lowercased()
+
+        if isToday {
+            return "Today \(timeString)"
+        } else if isYesterday {
+            return "Yesterday \(timeString)"
+        } else {
+            formatter.dateFormat = "MMM d"
+            let dateString = formatter.string(from: date)
+            return "\(dateString) \(timeString)"
         }
     }
 
@@ -229,7 +366,7 @@ struct RoughComposerView: View {
         let newSelection = NSRange(location: r.location, length: newLength)
         textIntent = TypingTextIntent(.setSelectionUTF16(newSelection))
 
-        clearAlternativesAndSession()
+        // Keep alternatives visible - don't clear until user edits the text
     }
 
     private func clearAlternativesAndSession() {
@@ -238,6 +375,11 @@ struct RoughComposerView: View {
         showEmojisList = false
         giggleSessionRange = nil
         giggleSessionTextForAPI = nil
+    }
+
+    /// Applies rail layout numbers on the next run loop so we don’t mutate `@State` during preference propagation (reduces “accumulator after completion” noise).
+    private func scheduleRailMetricUpdate(_ update: @escaping () -> Void) {
+        DispatchQueue.main.async(execute: update)
     }
 
     private static func clampedUTF16Range(_ range: NSRange, maxLength: Int) -> NSRange {
@@ -252,8 +394,9 @@ struct RoughComposerView: View {
         return r
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
+    /// Chat-style header (Figma `313:5477`): back, centered peer avatar + name, balanced trailing space.
+    private var chatHeader: some View {
+        HStack(alignment: .center, spacing: 0) {
             Button(action: onBack) {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.left")
@@ -264,20 +407,122 @@ struct RoughComposerView: View {
                 .foregroundStyle(Theme.textSecondary)
             }
             .buttonStyle(.plain)
-            .padding(.leading, 20)
-            .padding(.top, Theme.paddingSmall)
+            .frame(width: 88, alignment: .leading)
+
+            Spacer(minLength: 0)
+
+            VStack(spacing: 6) {
+                Text("S")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(width: 44, height: 44)
+                    .background(Theme.primaryYellow)
+                    .clipShape(Circle())
+
+                HStack(spacing: 4) {
+                    Text("Serena")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Theme.textSecondary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Theme.textSecondary.opacity(0.7))
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            Color.clear
+                .frame(width: 88, height: 1)
         }
+        .padding(.horizontal, Theme.paddingSmall)
+        .padding(.top, Theme.paddingSmall)
+        .padding(.bottom, 12)
+        .frame(maxWidth: .infinity)
+        .background(Theme.chatSurface)
     }
 
-    private var textArea: some View {
-        TypingTextView(
-            text: $message,
-            selectedUTF16Range: $composerUTF16Selection,
-            textIntent: $textIntent
-        )
-            .frame(minHeight: 120, alignment: .topLeading)
+    /// Pill composer row above the gray toolbar (empty by default; no placeholder in Figma).
+    private var composerInputRow: some View {
+        HStack(alignment: .center, spacing: Theme.paddingSmall) {
+            Group {
+                TypingTextView(
+                    text: $message,
+                    selectedUTF16Range: $composerUTF16Selection,
+                    textIntent: $textIntent,
+                    font: .systemFont(ofSize: Theme.composerInputFontSize, weight: .regular),
+                    onVisualLineCountChange: { composerVisualLineCount = $0 }
+                )
+                .frame(height: composerInputFieldHeight)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 56, style: .continuous)
+                        .fill(Color.white)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 56, style: .continuous)
+                        .stroke(Color(red: 16 / 255, green: 16 / 255, blue: 16 / 255).opacity(0.10), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 56, style: .continuous))
+                .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 0)
+            }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, Theme.paddingMedium)
+            .padding(.trailing, showEmojisList ? 68 : 0) // Make space for emoji bar (60pt width + 8pt gap)
+
+            if !showEmojisList {
+                Button {
+                    handleSendMessage()
+                } label: {
+                    Image(systemName: "paperplane.fill")
+                        .font(.system(size: Theme.composerSendIconSize, weight: .semibold))
+                        .foregroundStyle(hasComposerText ? Theme.textPrimary : Color.white)
+                        .frame(width: Theme.composerSendButtonSize, height: Theme.composerSendButtonSize)
+                        .background(
+                            Circle()
+                                .fill(hasComposerText ? Theme.primaryYellow : Theme.keyboardBackground)
+                        )
+                        .shadow(
+                            color: Color.black.opacity(hasComposerText ? 0.08 : 0),
+                            radius: 5,
+                            x: 0,
+                            y: 0
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Send"))
+                .disabled(!hasComposerText)
+            }
+        }
+        .padding(.leading, Theme.paddingSmall)
+        .padding(.trailing, Theme.paddingSmall)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity)
+        .background(Color.white)
+    }
+
+    /// Right emoji rail only: does not participate in toolbar layout (Translate / Get Giggling unchanged).
+    /// The bottom edge of the emoji bar aligns with the bottom edge of the text input box.
+    private var emojiRailOverlay: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            HStack(alignment: .bottom, spacing: 0) {
+                Spacer()
+
+                EmojisListView(options: giggleEmojiOptions, selectedEmoji: $selectedEmoji) { option in
+                    showEmojisList = false
+                    fetchAlternativesFromGemini(emoji: option.moodEmoji)
+                }
+                .padding(.trailing, Theme.paddingSmall)
+            }
+
+            // Space for: toolbar (48pt) + text input (56pt) + padding (10pt each top/bottom) + keyboard
+            Spacer()
+                .frame(height: 348) // Adjust this to move emoji bar up/down
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .allowsHitTesting(true)
+        .transition(.move(edge: .trailing).combined(with: .opacity))
     }
 
     private var toolBar: some View {
