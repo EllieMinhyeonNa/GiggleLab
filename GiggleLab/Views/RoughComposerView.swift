@@ -106,13 +106,13 @@ struct RoughComposerView: View {
                         }
                     )
 
-                ScrollView {
-                    VStack(spacing: 0) {
+                ScrollViewReader { proxy in
+                    ScrollView {
                         if messages.isEmpty {
                             Color.clear
-                                .frame(minHeight: 120)
+                                .frame(height: 120)
                         } else {
-                            LazyVStack(spacing: 16) {
+                            VStack(spacing: 16) {
                                 ForEach(messages) { msg in
                                     VStack(spacing: 6) {
                                         Text(formatTimestamp(msg.timestamp))
@@ -132,14 +132,24 @@ struct RoughComposerView: View {
                                         }
                                     }
                                     .padding(.horizontal, Theme.paddingSmall)
+                                    .id(msg.id)
                                 }
                             }
                             .padding(.top, 16)
+                            .padding(.bottom, 16)
+                        }
+                    }
+                    .background(Color.white)
+                    .onChange(of: messages.count) { _, _ in
+                        if let lastMessage = messages.last {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                withAnimation {
+                                    proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                                }
+                            }
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.white)
 
                 composerInputRow
 
@@ -366,6 +376,9 @@ struct RoughComposerView: View {
         let newSelection = NSRange(location: r.location, length: newLength)
         textIntent = TypingTextIntent(.setSelectionUTF16(newSelection))
 
+        // Update giggleSessionRange to the new replaced range so subsequent swaps work correctly
+        giggleSessionRange = newSelection
+
         // Keep alternatives visible - don't clear until user edits the text
     }
 
@@ -461,7 +474,7 @@ struct RoughComposerView: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 56, style: .continuous)
-                        .stroke(Color(red: 16 / 255, green: 16 / 255, blue: 16 / 255).opacity(0.10), lineWidth: 1)
+                        .stroke(Color(red: 16 / 255, green: 16 / 255, blue: 16 / 255).opacity(0.30), lineWidth: 1)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 56, style: .continuous))
                 .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 0)
@@ -475,11 +488,11 @@ struct RoughComposerView: View {
                 } label: {
                     Image(systemName: "paperplane.fill")
                         .font(.system(size: Theme.composerSendIconSize, weight: .semibold))
-                        .foregroundStyle(hasComposerText ? Theme.textPrimary : Color.white)
+                        .foregroundColor(hasComposerText ? Theme.textPrimary : .white)
                         .frame(width: Theme.composerSendButtonSize, height: Theme.composerSendButtonSize)
                         .background(
                             Circle()
-                                .fill(hasComposerText ? Theme.primaryYellow : Theme.keyboardBackground)
+                                .fill(hasComposerText ? Theme.primaryYellow : Color(hex: 0xD0D0D0))
                         )
                         .shadow(
                             color: Color.black.opacity(hasComposerText ? 0.08 : 0),

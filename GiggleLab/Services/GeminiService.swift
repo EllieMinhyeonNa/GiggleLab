@@ -9,28 +9,57 @@ actor GeminiService {
     // Rate limiting
     private var requestCount = 0
     private var lastResetTime = Date()
-    private let maxRequestsPerMinute = 15
+    private let maxRequestsPerMinute = 150  // Tier 1 paid quota: 150 RPM
 
-    /// GiggleBee tone definitions
+
     enum GiggleBeeTone {
         case crying, excited, laughing, loving, nervous, pleading, surprised
 
         var promptDefinition: String {
             switch self {
             case .crying:
-                return "TONE: Dramatic devastation with attitude. Not quiet sadness — loud, almost indignant grief. The energy is 'I cannot believe this happened to me.' Write with emotional intensity, like the world has personally wronged them. Avoid passive or gentle phrasing."
+                return """
+                TONE: Dramatic devastation with attitude. Not quiet sadness — \
+                loud, almost indignant grief. The energy is 'I cannot believe this happened to me.' \
+                Write with emotional intensity, like the world has personally wronged them. Avoid passive or gentle phrasing.
+                """
             case .excited:
-                return "TONE: Stunned into excitement — overwhelmed to the point of going blank. Less 'yay!' and more 'I literally cannot process this right now.' High energy expressed through disbelief, not cheerleading. Fragmented thoughts, trailing off, or all-caps moments fit here."
+                return """
+                TONE: Stunned into excitement — overwhelmed to the point of going blank. \
+                Less 'yay!' and more 'I literally cannot process this right now.' \
+                High energy expressed through disbelief, not cheerleading. \
+                Fragmented thoughts, trailing off, or all-caps moments fit here.
+                """
             case .laughing:
-                return "TONE: Full body laughter, completely unhinged. Not a chuckle — the kind where you can't finish your sentence. Chaotic, breathless energy. Interrupted thoughts, trailing 'haha's mid-sentence, or absurdist humor all work well."
+                return """
+                TONE: Full body laughter, completely unhinged. \
+                Not a chuckle — the kind where you can't finish your sentence. \
+                Chaotic, breathless energy. Interrupted thoughts, trailing 'haha's mid-sentence, or absurdist humor all work well.
+                """
             case .loving:
-                return "TONE: Soft, warm, genuinely tender. Not flirty or performative — more like a quiet 'I'm so happy you exist.' Sincere and unhurried. Avoid exclamation-heavy or over-the-top phrasing. The warmth should feel earned, not announced."
+                return """
+                TONE: Soft, warm, genuinely tender. Not flirty or performative — more like a quiet \
+                'I'm so happy you exist.' Sincere and unhurried. Avoid exclamation-heavy or over-the-top phrasing. \
+                The warmth should feel earned, not announced.
+                """
             case .nervous:
-                return "TONE: Trying to hold it together while clearly not holding it together. Awkward, self-aware, slightly self-deprecating. 'Ha ha everything is fine (it's not fine)' energy. Hedging words, over-explaining, or nervous laughter mid-sentence all fit."
+                return """
+                TONE: Trying to hold it together while clearly not holding it together. \
+                Awkward, self-aware, slightly self-deprecating. 'Ha ha everything is fine (it's not fine)' energy. \
+                Hedging words, over-explaining, or nervous laughter mid-sentence all fit.
+                """
             case .pleading:
-                return "TONE: Maximally soft power — gently irresistible, not demanding. This person knows exactly how endearing they're being and is deploying it strategically. Hopeful, sweet, a little vulnerable. Avoid whining — the pleading should feel charming, not desperate."
+                return """
+                TONE: Maximally soft power — gently irresistible, not demanding. \
+                This person knows exactly how endearing they're being and is deploying it strategically. \
+                Hopeful, sweet, a little vulnerable. Avoid whining — the pleading should feel charming, not desperate.
+                """
             case .surprised:
-                return "TONE: Clean, pure shock — no layer on top yet. They haven't processed enough to react with feeling. '...wait, what?' energy rather than excitement or fear. Short, stunned phrasing. Trailing off or disbelief works well here."
+                return """
+                TONE: Clean, pure shock — no layer on top yet. They haven't processed enough to react with feeling. \
+                '...wait, what?' energy rather than excitement or fear. Short, stunned phrasing. \
+                Trailing off or disbelief works well here.
+                """
             }
         }
 
